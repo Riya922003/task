@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import type { Task, TaskCreate } from '../api/tasks';
 import { createTask, deleteTask, getTasks, updateTask } from '../api/tasks';
+import ConfirmModal from '../components/ConfirmModal';
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'done'] as const;
 const emptyForm: TaskCreate = { title: '', description: '', status: 'pending' };
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [form, setForm] = useState<TaskCreate>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -57,13 +59,15 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this task?')) return;
+  const handleDelete = async () => {
+    if (deletingId === null) return;
     try {
-      await deleteTask(id);
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+      await deleteTask(deletingId);
+      setTasks((prev) => prev.filter((t) => t.id !== deletingId));
     } catch {
       setError('Failed to delete task');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -223,7 +227,7 @@ export default function Dashboard() {
                       <button className="btn-edit" onClick={() => handleEdit(task)}>
                         Edit
                       </button>
-                      <button className="btn-del" onClick={() => handleDelete(task.id)}>
+                      <button className="btn-del" onClick={() => setDeletingId(task.id)}>
                         Delete
                       </button>
                     </div>
@@ -234,6 +238,15 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {deletingId !== null && (
+        <ConfirmModal
+          title="Delete Task"
+          message="Are you sure you want to delete this task? This action cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
     </div>
   );
 }
